@@ -1,16 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="title">Scatterplot Graph</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D3 Scatterplot</title>
+  <style>
+    .dot {
+      stroke: black;
+    }
+    .tooltip {
+      position: absolute;
+      background-color: #fff;
+      padding: 8px;
+      border: 1px solid #000;
+      border-radius: 4px;
+      visibility: hidden;
+    }
+  </style>
 </head>
-<body style="display: flex; flex-direction: column; justify-content: center; align-items: center;">
-    <h1>Doping in Professional Bicycle Racing</h1>
-    <p>35 Fastest times up Alpe d'Huez</p>
-</body>
-<script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
-<script>
-</script>
+<body>
+  <h1 id="title">Doping in Professional Cycling</h1>
+  <div id="tooltip" class="tooltip"></div>
+  <svg width="800" height="500"></svg>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script>
+    // Set dimensions and margins
+const margin = { top: 50, right: 40, bottom: 60, left: 70 },
+      width = 800 - margin.left - margin.right,
+      height = 500 - margin.top - margin.bottom;
 
+// Create the SVG container
+const svg = d3.select("svg")
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+  .attr("transform", `translate(${margin.left},${margin.top})`);
+
+// Load the data
+d3.json('https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json').then(data => {
+
+  // Parse data and define scales
+  const x = d3.scaleTime()
+    .domain([new Date(d3.min(data, d => d.Year) - 1, 0), new Date(d3.max(data, d => d.Year) + 1, 0)])
+    .range([0, width]);
+
+  const y = d3.scaleTime()
+    .domain([d3.min(data, d => new Date(1970, 0, 1, 0, d.Time.split(':')[0], d.Time.split(':')[1])),
+             d3.max(data, d => new Date(1970, 0, 1, 0, d.Time.split(':')[0], d.Time.split(':')[1]))])
+    .range([0, height]);
+
+  // Create X-axis
+  const xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat('%Y'));
+  svg.append('g')
+    .attr('id', 'x-axis')
+    .attr('transform', `translate(0,${height})`)
+    .call(xAxis);
+
+  // Create Y-axis
+  const yAxis = d3.axisLeft(y).tickFormat(d3.timeFormat('%M:%S'));
+  svg.append('g')
+    .attr('id', 'y-axis')
+    .call(yAxis);
+
+  // Add dots
+  svg.selectAll('.dot')
+    .data(data)
+    .enter()
+    .append('circle')
+    .attr('class', 'dot')
+    .attr('cx', d => x(new Date(d.Year, 0)))
+    .attr('cy', d => y(new Date(1970, 0, 1, 0, d.Time.split(':')[0], d.Time.split(':')[1])))
+    .attr('r', 5)
+    .attr('data-xvalue', d => d.Year)
+    .attr('data-yvalue', d => new Date(1970, 0, 1, 0, d.Time.split(':')[0], d.Time.split(':')[1]))
+    .style('fill', d => d.Doping ? 'red' : 'green')
+    .on('mouseover', (event, d) => {
+      d3.select('#tooltip')
+        .style('visibility', 'visible')
+        .style('left', `${event.pageX + 10}px`)
+        .style('top', `${event.pageY - 30}px`)
+        .html(`${d.Name} (${d.Year})<br>Time: ${d.Time}<br>${d.Doping ? d.Doping : 'No Doping'}`)
+        .attr('data-year', d.Year);
+    })
+    .on('mouseout', () => {
+      d3.select('#tooltip')
+        .style('visibility', 'hidden');
+    });
+
+  // Add Legend
+  const legend = svg.append('g')
+    .attr('id', 'legend')
+    .attr('transform', `translate(${width - 150},${height - 100})`);
+
+  legend.append('rect')
+    .attr('x', 0)
+    .attr('y', 0)
+    .attr('width', 18)
+    .attr('height', 18)
+    .style('fill', 'green');
+
+  legend.append('text')
+    .attr('x', 24)
+    .attr('y', 14)
+    .text('No Doping Allegations');
+
+  legend.append('rect')
+    .attr('x', 0)
+    .attr('y', 30)
+    .attr('width', 18)
+    .attr('height', 18)
+    .style('fill', 'red');
+
+  legend.append('text')
+    .attr('x', 24)
+    .attr('y', 44)
+    .text('Riders with Doping Allegations');
+
+});
+  </script>
+  <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+</body>
 </html>
